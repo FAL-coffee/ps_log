@@ -3,11 +3,38 @@ import 'package:flutter/material.dart';
 
 import 'record.dart';
 
+/// タグごとの収支を集計する
+Map<String, int> aggregateProfitByTag(List<Record> records) {
+  final Map<String, int> totals = {};
+  for (final r in records) {
+    for (final t in r.tags) {
+      totals[t] = (totals[t] ?? 0) + r.profit;
+    }
+  }
+  return totals;
+}
+
+/// カウント項目ごとの回数を集計する（マスタ項目のみ）
+Map<String, int> aggregateCounts(
+    List<Record> records, List<String> masterItems) {
+  final Map<String, int> totals = {};
+  for (final r in records) {
+    for (final c in r.counts) {
+      if (masterItems.contains(c.name)) {
+        totals[c.name] = (totals[c.name] ?? 0) + c.count;
+      }
+    }
+  }
+  return totals;
+}
+
 /// 集計ページ
 class StatisticsPage extends StatefulWidget {
   final List<Record> records;
+  final List<String> countMaster;
 
-  const StatisticsPage({super.key, required this.records});
+  const StatisticsPage(
+      {super.key, required this.records, required this.countMaster});
 
   @override
   State<StatisticsPage> createState() => _StatisticsPageState();
@@ -46,7 +73,10 @@ class _StatisticsPageState extends State<StatisticsPage>
         controller: _controller,
         children: [
           _GraphTab(records: widget.records),
-          _RankingTab(records: widget.records),
+          _RankingTab(
+            records: widget.records,
+            countMaster: widget.countMaster,
+          ),
         ],
       ),
     );
@@ -208,8 +238,9 @@ class _GraphTabState extends State<_GraphTab> {
 
 class _RankingTab extends StatelessWidget {
   final List<Record> records;
+  final List<String> countMaster;
 
-  const _RankingTab({required this.records});
+  const _RankingTab({required this.records, required this.countMaster});
 
   List<MapEntry<String, int>> _buildRanking(
       List<Record> list, String Function(Record) keySelector) {
@@ -227,15 +258,19 @@ class _RankingTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final hallRanking = _buildRanking(records, (r) => r.hall);
     final machineRanking = _buildRanking(records, (r) => r.machine);
+    final tagRanking = aggregateProfitByTag(records).entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final countTotals = aggregateCounts(records, countMaster).entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
 
-    Widget _rankingList(List<MapEntry<String, int>> list) {
+    Widget _rankingList(List<MapEntry<String, int>> list, String unit) {
       return Column(
         children: List.generate(list.length, (i) {
           final e = list[i];
           return ListTile(
             leading: Text('${i + 1}'),
             title: Text(e.key),
-            trailing: Text('${e.value}円'),
+            trailing: Text('${e.value}$unit'),
           );
         }),
       );
@@ -246,11 +281,19 @@ class _RankingTab extends StatelessWidget {
       children: [
         const Text('ホール別収支ランキング',
             style: TextStyle(fontWeight: FontWeight.bold)),
-        _rankingList(hallRanking),
+        _rankingList(hallRanking, '円'),
         const SizedBox(height: 24),
         const Text('機種別収支ランキング',
             style: TextStyle(fontWeight: FontWeight.bold)),
-        _rankingList(machineRanking),
+        _rankingList(machineRanking, '円'),
+        const SizedBox(height: 24),
+        const Text('タグ別収支',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        _rankingList(tagRanking, '円'),
+        const SizedBox(height: 24),
+        const Text('カウント集計',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        _rankingList(countTotals, '回'),
       ],
     );
   }
