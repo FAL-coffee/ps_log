@@ -8,6 +8,7 @@ void main() {
     await tester.pumpWidget(const PsLogApp());
 
     expect(find.byType(ListTile), findsNothing);
+    expect(find.textContaining('Total Profit: \$0'), findsOneWidget);
 
     await tester.tap(find.byType(FloatingActionButton));
     await tester.pumpAndSettle();
