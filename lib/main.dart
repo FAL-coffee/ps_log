@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'record.dart';
 import 'machine_master.dart';
+import 'machine_api_service.dart';
 import 'tag_management.dart';
 import 'count_master_management.dart';
 import 'statistics.dart';
@@ -161,9 +162,8 @@ class _RecordListPageState extends State<RecordListPage> {
     final tagInputController = TextEditingController();
     final List<String> selectedTags = [];
     final List<CountEntry> countEntries = [];
-
-    // Autocomplete selection
-    Machine? selectedMachine;
+    // 機種名の候補
+    List<String> machineSuggestions = [];
 
     void _addCountEntryDialog(
         List<CountEntry> list, void Function(void Function()) setStateDialog) {
@@ -305,28 +305,38 @@ class _RecordListPageState extends State<RecordListPage> {
                         },
                       ),
                       const SizedBox(height: 8),
-                      // 機種オートコンプリート（alias対応）
-                      Autocomplete<Machine>(
+                      // 機種オートコンプリート（外部API利用）
+                      Autocomplete<String>(
                         optionsBuilder: (TextEditingValue tev) {
-                          final q = tev.text.trim().toLowerCase();
-                          if (q.isEmpty) return const Iterable<Machine>.empty();
-                          return machineMaster.where((m) {
-                            final nameMatch = m.name.toLowerCase().contains(q);
-                            final aliasMatch = m.aliases
-                                .any((a) => a.toLowerCase().contains(q));
-                            return nameMatch || aliasMatch;
-                          });
+                          final q = tev.text.trim();
+                          if (q.isEmpty) {
+                            return const Iterable<String>.empty();
+                          }
+                          return machineSuggestions;
                         },
-                        displayStringForOption: (m) => m.name,
-                        onSelected: (m) => selectedMachine = m,
+                        onSelected: (m) => machineController.text = m,
                         fieldViewBuilder:
                             (context, textController, focusNode, _) {
                           machineController = textController;
+                          void updateSuggestions() async {
+                            final q = textController.text.trim();
+                            if (q.length < 2) {
+                              setStateDialog(() => machineSuggestions = []);
+                              return;
+                            }
+                            final results =
+                                await MachineApiService.fetchSuggestions(q);
+                            setStateDialog(() => machineSuggestions = results);
+                          }
+
+                          textController.addListener(updateSuggestions);
+
                           return TextFormField(
                             key: const Key('machineField'),
                             controller: textController,
                             focusNode: focusNode,
-                            decoration: const InputDecoration(labelText: '機種'),
+                            decoration:
+                                const InputDecoration(labelText: '機種'),
                             validator: (v) =>
                                 (v == null || v.trim().isEmpty)
                                     ? '機種を入力してください'
@@ -496,21 +506,16 @@ class _RecordListPageState extends State<RecordListPage> {
                     final hallName = hallController.text.trim();
                     final machineInput = machineController.text.trim();
 
-                    // 機種名の決定（選択優先→マスタ検索→入力そのまま）
+                    // 機種名の決定（マスタ検索→入力そのまま）
                     String machineName;
-                    if (selectedMachine != null &&
-                        selectedMachine!.name == machineInput) {
-                      machineName = selectedMachine!.name;
-                    } else {
-                      try {
-                        machineName = machineMaster
-                            .firstWhere((m) =>
-                                m.name == machineInput ||
-                                m.aliases.contains(machineInput))
-                            .name;
-                      } catch (_) {
-                        machineName = machineInput;
-                      }
+                    try {
+                      machineName = machineMaster
+                          .firstWhere((m) =>
+                              m.name == machineInput ||
+                              m.aliases.contains(machineInput))
+                          .name;
+                    } catch (_) {
+                      machineName = machineInput;
                     }
 
                     setState(() {
