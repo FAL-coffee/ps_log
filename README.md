@@ -1,16 +1,72 @@
-# ps_log
+# psLog - パチンコ・パチスロ収支管理アプリ
 
-A new Flutter project.
+## 概要
+psLog はパチンコ・パチスロの収支を簡単に記録・分析できるスマホアプリです。ライトユーザーはシンプルな収支表として、アドバンスユーザーはタグ付けやカウント機能を駆使した詳細分析として利用できます。
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## Initial Release 機能一覧
 
-A few resources to get you started if this is your first Flutter project:
+### 1. 記録（Record）
+- 投資額・回収額の入力
+- ホール選択（Google Places API or ユーザー登録）
+- 機種選択（機種マスタ／alias対応）
+- 稼働時間（開始／終了）
+- 備考メモ
+- タグ付け（複数登録可／ユーザー管理：新規作成・編集・削除）
+- カウントログ
+  - 収支ごとに自由追加可能（即席項目）
+  - カウント項目マスタから選択可能
+  - 即席項目は収支限定、必要なら「昇格」でマスタ登録
+  - UI：＋／−ボタン or 数値直接入力
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### 2. 集計（Stats）
+- 日／週／月／年ごとの収支グラフ
+- 店舗別収支ランキング
+- 機種別収支ランキング
+- 勝率／平均投資／平均回収
+- 稼働時間合計
+- タグ別集計
+- カウント集計（マスタ項目のみ対象）
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### 3. 店舗（Hall）
+- 近隣検索（Google Places API）
+- お気に入り店舗登録
+- 店舗詳細（住所／地図／営業時間）
+- 設置機種（ユーザー報告 or 外部リンク）
+
+### 4. 機種（Machine）
+- 機種マスタ
+  - パチンコ／スロット
+  - 機種名／型式名／通称名
+  - メーカー／導入日
+- お気に入り機種管理
+- 別名検索対応（例：「ユニコーン」「ヴヴヴ」）
+
+### 5. タグ（Tag）
+- ユーザーが自由に新規登録／編集／削除
+- 収支単位に複数タグ付与可能
+
+### 6. カウント項目マスタ（Count Master）
+- 任意の名前を付けて保存
+- 編集／削除
+- 収支内で追加した即席項目を「昇格」してマスタ登録可能
+- 収支入力時にサジェスト／プルダウンで利用
+
+### 7. 設定 / オンボーディング
+- 初回起動時に「シンプルに始める」 or 「細かく管理する」を選択
+- 設定画面から表示モード切替可能
+- データバックアップ機能（将来対応予定）
+
+---
+
+## 開発メモ
+- 初版は **Flutter** を想定（クロスプラットフォーム対応）
+- バックエンド／ストレージは検討中（Supabase / Firebase / SQLite ローカルなど）
+- Codex との連携を前提に仕様をモジュール化
+
+---
+
+## 今後の展望
+- 初期リリースでは収支・タグ・カウントを中心に提供
+- 将来的にクラウド同期、SNSシェア、コミュニティ機能などを検討
