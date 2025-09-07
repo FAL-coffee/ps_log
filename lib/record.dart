@@ -1,5 +1,8 @@
 /// 1件の稼働記録を表すクラス
 class Record {
+  /// 選択したホール名
+  final String hall;
+
   /// 選択した機種名
   final String machine;
   /// 日付
@@ -22,6 +25,7 @@ class Record {
 
     const Record({
       required this.date,
+      required this.hall,
       required this.machine,
       required this.investment,
       required this.returnAmount,
