@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'record.dart';
 import 'machine_master.dart';
 import 'tag_management.dart';
+import 'statistics.dart';
 
 void main() {
   runApp(const PsLogApp());
@@ -450,6 +451,13 @@ class _RecordListPageState extends State<RecordListPage> {
       appBar: AppBar(
         title: const Text('記録一覧'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.bar_chart),
+            onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => StatisticsPage(records: _records))),
+          ),
           IconButton(
             icon: const Icon(Icons.label),
             onPressed: _manageTags,
