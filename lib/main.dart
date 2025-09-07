@@ -57,6 +57,14 @@ class _RecordListPageState extends State<RecordListPage> {
     }
   }
 
+  Future<void> _manageMachines() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const MachineMasterPage()),
+    );
+    setState(() {});
+  }
+
   void _addRecord() {
     final formKey = GlobalKey<FormState>();
 
@@ -475,6 +483,10 @@ class _RecordListPageState extends State<RecordListPage> {
                 builder: (_) => HallSearchPage(apiKey: _placesApiKey),
               ),
             ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.videogame_asset),
+            onPressed: _manageMachines,
           ),
           IconButton(
             icon: const Icon(Icons.label),
