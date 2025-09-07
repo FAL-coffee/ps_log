@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'record.dart';
 import 'machine_master.dart';
+import 'tag_management.dart';
 
 void main() {
   runApp(const PsLogApp());
@@ -31,10 +32,24 @@ class RecordListPage extends StatefulWidget {
 class _RecordListPageState extends State<RecordListPage> {
   final List<Record> _records = [];
   final List<String> _halls = [];
+  final List<String> _tags = [];
+  final List<String> _countMaster = [];
   DateTime _selectedDate = DateTime.now();
 
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  Future<void> _manageTags() async {
+    final updated = await Navigator.push<List<String>>(context,
+        MaterialPageRoute(builder: (_) => TagManagementPage(tags: _tags)));
+    if (updated != null) {
+      setState(() {
+        _tags
+          ..clear()
+          ..addAll(updated);
+      });
+    }
   }
 
   void _addRecord() {
@@ -48,213 +63,371 @@ class _RecordListPageState extends State<RecordListPage> {
     final startController = TextEditingController();
     final endController = TextEditingController();
     final noteController = TextEditingController();
+    final tagInputController = TextEditingController();
+    final List<String> selectedTags = [];
+    final List<CountEntry> countEntries = [];
 
     // Autocomplete selection
     Machine? selectedMachine;
 
+    void _addCountEntryDialog(
+        List<CountEntry> list, void Function(void Function()) setStateDialog) {
+      final nameController = TextEditingController();
+      final countController = TextEditingController();
+      bool addToMaster = false;
+      showDialog(
+        context: context,
+        builder: (context) {
+          return StatefulBuilder(
+            builder: (context, setStateInner) {
+              return AlertDialog(
+                title: const Text('カウント追加'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Autocomplete<String>(
+                      optionsBuilder: (TextEditingValue tev) {
+                        final q = tev.text.trim().toLowerCase();
+                        return _countMaster
+                            .where((c) => c.toLowerCase().contains(q));
+                      },
+                      onSelected: (c) => nameController.text = c,
+                      fieldViewBuilder:
+                          (context, textController, focusNode, _) {
+                        return TextField(
+                          controller: textController,
+                          focusNode: focusNode,
+                          decoration: const InputDecoration(labelText: '項目'),
+                        );
+                      },
+                    ),
+                    TextField(
+                      controller: countController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: '回数'),
+                    ),
+                    CheckboxListTile(
+                      value: addToMaster,
+                      title: const Text('マスタに追加'),
+                      onChanged: (v) =>
+                          setStateInner(() => addToMaster = v ?? false),
+                    )
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('キャンセル'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      final name = nameController.text.trim();
+                      final cnt = int.tryParse(countController.text) ?? 0;
+                      if (name.isNotEmpty) {
+                        setStateDialog(() {
+                          list.add(CountEntry(name: name, count: cnt));
+                          if (addToMaster && !_countMaster.contains(name)) {
+                            _countMaster.add(name);
+                          }
+                        });
+                      }
+                      Navigator.pop(context);
+                    },
+                    child: const Text('追加'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+    }
+
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('記録を追加'),
-          content: Form(
-            key: formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // ホールオートコンプリート（ユーザー登録）
-                  Autocomplete<String>(
-                    optionsBuilder: (TextEditingValue tev) {
-                      final q = tev.text.trim().toLowerCase();
-                      if (q.isEmpty) {
-                        return _halls;
-                      }
-                      return _halls
-                          .where((h) => h.toLowerCase().contains(q));
-                    },
-                    onSelected: (h) => hallController.text = h,
-                    fieldViewBuilder:
-                        (context, textController, focusNode, _) {
-                      hallController = textController;
-                      return TextFormField(
-                        key: const Key('hallField'),
-                        controller: textController,
-                        focusNode: focusNode,
+        void addTag(String t) {
+          final tag = t.trim();
+          if (tag.isEmpty) return;
+          if (!selectedTags.contains(tag)) {
+            selectedTags.add(tag);
+          }
+          if (!_tags.contains(tag)) {
+            _tags.add(tag);
+          }
+          tagInputController.clear();
+        }
+
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('記録を追加'),
+              content: Form(
+                key: formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // ホールオートコンプリート（ユーザー登録）
+                      Autocomplete<String>(
+                        optionsBuilder: (TextEditingValue tev) {
+                          final q = tev.text.trim().toLowerCase();
+                          if (q.isEmpty) {
+                            return _halls;
+                          }
+                          return _halls
+                              .where((h) => h.toLowerCase().contains(q));
+                        },
+                        onSelected: (h) => hallController.text = h,
+                        fieldViewBuilder:
+                            (context, textController, focusNode, _) {
+                          hallController = textController;
+                          return TextFormField(
+                            key: const Key('hallField'),
+                            controller: textController,
+                            focusNode: focusNode,
+                            decoration:
+                                const InputDecoration(labelText: 'ホール'),
+                            validator: (v) =>
+                                (v == null || v.trim().isEmpty)
+                                    ? 'ホールを入力してください'
+                                    : null,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      // 機種オートコンプリート（alias対応）
+                      Autocomplete<Machine>(
+                        optionsBuilder: (TextEditingValue tev) {
+                          final q = tev.text.trim().toLowerCase();
+                          if (q.isEmpty) return const Iterable<Machine>.empty();
+                          return machineMaster.where((m) {
+                            final nameMatch = m.name.toLowerCase().contains(q);
+                            final aliasMatch = m.aliases
+                                .any((a) => a.toLowerCase().contains(q));
+                            return nameMatch || aliasMatch;
+                          });
+                        },
+                        displayStringForOption: (m) => m.name,
+                        onSelected: (m) => selectedMachine = m,
+                        fieldViewBuilder:
+                            (context, textController, focusNode, _) {
+                          machineController = textController;
+                          return TextFormField(
+                            key: const Key('machineField'),
+                            controller: textController,
+                            focusNode: focusNode,
+                            decoration: const InputDecoration(labelText: '機種'),
+                            validator: (v) =>
+                                (v == null || v.trim().isEmpty)
+                                    ? '機種を入力してください'
+                                    : null,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        key: const Key('investmentField'),
+                        controller: investmentController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: '投資額'),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return '投資額を入力してください';
+                          }
+                          if (int.tryParse(value) == null) {
+                            return '数値を入力してください';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        key: const Key('returnField'),
+                        controller: returnController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: '回収額'),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return '回収額を入力してください';
+                          }
+                          if (int.tryParse(value) == null) {
+                            return '数値を入力してください';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        key: const Key('startField'),
+                        controller: startController,
+                        keyboardType: TextInputType.datetime,
                         decoration:
-                            const InputDecoration(labelText: 'ホール'),
-                        validator: (v) =>
-                            (v == null || v.trim().isEmpty)
-                                ? 'ホールを入力してください'
-                                : null,
-                      );
-                    },
+                            const InputDecoration(labelText: '開始時間 (HH:mm)'),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        key: const Key('endField'),
+                        controller: endController,
+                        keyboardType: TextInputType.datetime,
+                        decoration:
+                            const InputDecoration(labelText: '終了時間 (HH:mm)'),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        key: const Key('noteField'),
+                        controller: noteController,
+                        decoration: const InputDecoration(labelText: 'メモ'),
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: const Text('タグ'),
+                      ),
+                      Wrap(
+                        spacing: 4.0,
+                        children: selectedTags
+                            .map((t) => InputChip(
+                                  label: Text(t),
+                                  onDeleted: () => setStateDialog(
+                                      () => selectedTags.remove(t)),
+                                ))
+                            .toList(),
+                      ),
+                      Autocomplete<String>(
+                        optionsBuilder: (TextEditingValue tev) {
+                          final q = tev.text.trim().toLowerCase();
+                          return _tags
+                              .where((t) => t.toLowerCase().contains(q));
+                        },
+                        onSelected: (t) => setStateDialog(() => addTag(t)),
+                        fieldViewBuilder:
+                            (context, textController, focusNode, _) {
+                          tagInputController.text = textController.text;
+                          return TextField(
+                            controller: textController,
+                            focusNode: focusNode,
+                            decoration:
+                                const InputDecoration(labelText: 'タグを追加'),
+                            onSubmitted: (v) =>
+                                setStateDialog(() => addTag(v)),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: const Text('カウント'),
+                      ),
+                      Column(
+                        children: countEntries
+                            .map(
+                              (e) => ListTile(
+                                title: Text(e.name),
+                                trailing: Text(e.count.toString()),
+                                leading: IconButton(
+                                  icon: const Icon(Icons.delete),
+                                  onPressed: () => setStateDialog(
+                                      () => countEntries.remove(e)),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                      TextButton.icon(
+                        onPressed: () =>
+                            _addCountEntryDialog(countEntries, setStateDialog),
+                        icon: const Icon(Icons.add),
+                        label: const Text('カウントを追加'),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  // 機種オートコンプリート（alias対応）
-                  Autocomplete<Machine>(
-                    optionsBuilder: (TextEditingValue tev) {
-                      final q = tev.text.trim().toLowerCase();
-                      if (q.isEmpty) return const Iterable<Machine>.empty();
-                      return machineMaster.where((m) {
-                        final nameMatch = m.name.toLowerCase().contains(q);
-                        final aliasMatch = m.aliases
-                            .any((a) => a.toLowerCase().contains(q));
-                        return nameMatch || aliasMatch;
-                      });
-                    },
-                    displayStringForOption: (m) => m.name,
-                    onSelected: (m) => selectedMachine = m,
-                    fieldViewBuilder: (context, textController, focusNode, _) {
-                      machineController = textController;
-                      return TextFormField(
-                        key: const Key('machineField'),
-                        controller: textController,
-                        focusNode: focusNode,
-                        decoration: const InputDecoration(labelText: '機種'),
-                        validator: (v) =>
-                            (v == null || v.trim().isEmpty) ? '機種を入力してください' : null,
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    key: const Key('investmentField'),
-                    controller: investmentController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: '投資額'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return '投資額を入力してください';
-                      }
-                      if (int.tryParse(value) == null) {
-                        return '数値を入力してください';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    key: const Key('returnField'),
-                    controller: returnController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: '回収額'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return '回収額を入力してください';
-                      }
-                      if (int.tryParse(value) == null) {
-                        return '数値を入力してください';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    key: const Key('startField'),
-                    controller: startController,
-                    keyboardType: TextInputType.datetime,
-                    decoration:
-                        const InputDecoration(labelText: '開始時間 (HH:mm)'),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    key: const Key('endField'),
-                    controller: endController,
-                    keyboardType: TextInputType.datetime,
-                    decoration:
-                        const InputDecoration(labelText: '終了時間 (HH:mm)'),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    key: const Key('noteField'),
-                    controller: noteController,
-                    decoration: const InputDecoration(labelText: 'メモ'),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('キャンセル'),
-            ),
-            TextButton(
-              onPressed: () {
-                if (!(formKey.currentState?.validate() ?? false)) {
-                  return;
-                }
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('キャンセル'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    if (!(formKey.currentState?.validate() ?? false)) {
+                      return;
+                    }
 
-                final investment = int.parse(investmentController.text);
-                final returnAmount = int.parse(returnController.text);
+                    final investment = int.parse(investmentController.text);
+                    final returnAmount = int.parse(returnController.text);
 
-                DateTime? startTime;
-                DateTime? endTime;
+                    DateTime? startTime;
+                    DateTime? endTime;
 
-                DateTime? _parseHM(String s) {
-                  final parts = s.split(':');
-                  if (parts.length != 2) return null;
-                  final h = int.tryParse(parts[0]);
-                  final m = int.tryParse(parts[1]);
-                  if (h == null || m == null) return null;
-                  return DateTime(
-                    _selectedDate.year,
-                    _selectedDate.month,
-                    _selectedDate.day,
-                    h,
-                    m,
-                  );
-                }
+                    DateTime? _parseHM(String s) {
+                      final parts = s.split(':');
+                      if (parts.length != 2) return null;
+                      final h = int.tryParse(parts[0]);
+                      final m = int.tryParse(parts[1]);
+                      if (h == null || m == null) return null;
+                      return DateTime(
+                        _selectedDate.year,
+                        _selectedDate.month,
+                        _selectedDate.day,
+                        h,
+                        m,
+                      );
+                    }
 
-                if (startController.text.isNotEmpty) {
-                  startTime = _parseHM(startController.text);
-                }
-                if (endController.text.isNotEmpty) {
-                  endTime = _parseHM(endController.text);
-                }
+                    if (startController.text.isNotEmpty) {
+                      startTime = _parseHM(startController.text);
+                    }
+                    if (endController.text.isNotEmpty) {
+                      endTime = _parseHM(endController.text);
+                    }
 
-                final note = noteController.text.trim();
-                final hallName = hallController.text.trim();
-                final machineInput = machineController.text.trim();
+                    final note = noteController.text.trim();
+                    final hallName = hallController.text.trim();
+                    final machineInput = machineController.text.trim();
 
-                // 機種名の決定（選択優先→マスタ検索→入力そのまま）
-                String machineName;
-                if (selectedMachine != null &&
-                    selectedMachine!.name == machineInput) {
-                  machineName = selectedMachine!.name;
-                } else {
-                  try {
-                    machineName = machineMaster
-                        .firstWhere((m) =>
-                            m.name == machineInput ||
-                            m.aliases.contains(machineInput))
-                        .name;
-                  } catch (_) {
-                    machineName = machineInput;
-                  }
-                }
+                    // 機種名の決定（選択優先→マスタ検索→入力そのまま）
+                    String machineName;
+                    if (selectedMachine != null &&
+                        selectedMachine!.name == machineInput) {
+                      machineName = selectedMachine!.name;
+                    } else {
+                      try {
+                        machineName = machineMaster
+                            .firstWhere((m) =>
+                                m.name == machineInput ||
+                                m.aliases.contains(machineInput))
+                            .name;
+                      } catch (_) {
+                        machineName = machineInput;
+                      }
+                    }
 
-                setState(() {
-                  if (!_halls.contains(hallName)) {
-                    _halls.add(hallName);
-                  }
-                  _records.add(Record(
-                    date: _selectedDate,
-                    hall: hallName,
-                    machine: machineName,
-                    investment: investment,
-                    returnAmount: returnAmount,
-                    startTime: startTime,
-                    endTime: endTime,
-                    note: note.isEmpty ? null : note,
-                  ));
-                });
-                Navigator.of(context).pop();
-              },
-              child: const Text('保存'),
-            ),
-          ],
+                    setState(() {
+                      if (!_halls.contains(hallName)) {
+                        _halls.add(hallName);
+                      }
+                      _records.add(Record(
+                        date: _selectedDate,
+                        hall: hallName,
+                        machine: machineName,
+                        investment: investment,
+                        returnAmount: returnAmount,
+                        startTime: startTime,
+                        endTime: endTime,
+                        note: note.isEmpty ? null : note,
+                        tags: List.from(selectedTags),
+                        counts: List.from(countEntries),
+                      ));
+                    });
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('保存'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -274,7 +447,15 @@ class _RecordListPageState extends State<RecordListPage> {
         '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('記録一覧')),
+      appBar: AppBar(
+        title: const Text('記録一覧'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.label),
+            onPressed: _manageTags,
+          )
+        ],
+      ),
       body: Column(
         children: [
           CalendarDatePicker(
@@ -306,6 +487,10 @@ class _RecordListPageState extends State<RecordListPage> {
                               Text(
                                   '開始: ${_formatTime(record.startTime!)}, 終了: ${_formatTime(record.endTime!)}'),
                             if (record.note != null) Text('メモ: ${record.note}'),
+                            if (record.tags.isNotEmpty)
+                              Text('タグ: ${record.tags.join(', ')}'),
+                            if (record.counts.isNotEmpty)
+                              Text('カウント: ${record.counts.map((e) => '${e.name}:${e.count}').join(', ')}'),
                           ],
                         ),
                       );
