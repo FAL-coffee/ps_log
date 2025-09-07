@@ -29,6 +29,11 @@ class RecordListPage extends StatefulWidget {
 
 class _RecordListPageState extends State<RecordListPage> {
   final List<Record> _records = [];
+  DateTime _selectedDate = DateTime.now();
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
 
   void _addRecord() {
     final investmentController = TextEditingController();
@@ -66,6 +71,7 @@ class _RecordListPageState extends State<RecordListPage> {
                 final returnAmount = int.tryParse(returnController.text) ?? 0;
                 setState(() {
                   _records.add(Record(
+                    date: _selectedDate,
                     investment: investment,
                     returnAmount: returnAmount,
                   ));
@@ -82,20 +88,39 @@ class _RecordListPageState extends State<RecordListPage> {
 
   @override
   Widget build(BuildContext context) {
+    final dayRecords =
+        _records.where((r) => _isSameDay(r.date, _selectedDate)).toList();
     return Scaffold(
       appBar: AppBar(title: const Text('Records')),
-      body: _records.isEmpty
-          ? const Center(child: Text('No records yet'))
-          : ListView.builder(
-              itemCount: _records.length,
-              itemBuilder: (context, index) {
-                final record = _records[index];
-                return ListTile(
-                  title: Text('Investment: \$${record.investment}, Return: \$${record.returnAmount}'),
-                  subtitle: Text('Profit: \$${record.profit}'),
-                );
-              },
-            ),
+      body: Column(
+        children: [
+          CalendarDatePicker(
+            initialDate: _selectedDate,
+            firstDate: DateTime(2000),
+            lastDate: DateTime(2100),
+            onDateChanged: (date) {
+              setState(() {
+                _selectedDate = date;
+              });
+            },
+          ),
+          Expanded(
+            child: dayRecords.isEmpty
+                ? const Center(child: Text('No records for selected day'))
+                : ListView.builder(
+                    itemCount: dayRecords.length,
+                    itemBuilder: (context, index) {
+                      final record = dayRecords[index];
+                      return ListTile(
+                        title: Text(
+                            'Investment: \$${record.investment}, Return: \$${record.returnAmount}'),
+                        subtitle: Text('Profit: \$${record.profit}'),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addRecord,
         tooltip: 'Add Record',
