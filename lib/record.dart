@@ -9,6 +9,9 @@ class Record {
   /// 回収額（円）
   final int returnAmount;
 
+  /// ホール名
+  final String hall;
+
   /// 開始時刻
   final DateTime? startTime;
 
@@ -22,6 +25,7 @@ class Record {
     required this.date,
     required this.investment,
     required this.returnAmount,
+    required this.hall,
     this.startTime,
     this.endTime,
     this.note,

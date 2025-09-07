@@ -29,6 +29,7 @@ class RecordListPage extends StatefulWidget {
 
 class _RecordListPageState extends State<RecordListPage> {
   final List<Record> _records = [];
+  final List<String> _halls = [];
   DateTime _selectedDate = DateTime.now();
 
   bool _isSameDay(DateTime a, DateTime b) {
@@ -41,102 +42,176 @@ class _RecordListPageState extends State<RecordListPage> {
     final startController = TextEditingController();
     final endController = TextEditingController();
     final noteController = TextEditingController();
+    String? selectedHall = _halls.isNotEmpty ? _halls.first : null;
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('記録を追加'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                key: const Key('investmentField'),
-                controller: investmentController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: '投資額'),
-              ),
-              TextField(
-                key: const Key('returnField'),
-                controller: returnController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: '回収額'),
-              ),
-              TextField(
-                key: const Key('startField'),
-                controller: startController,
-                keyboardType: TextInputType.datetime,
-                decoration: const InputDecoration(labelText: '開始時間 (HH:mm)'),
-              ),
-              TextField(
-                key: const Key('endField'),
-                controller: endController,
-                keyboardType: TextInputType.datetime,
-                decoration: const InputDecoration(labelText: '終了時間 (HH:mm)'),
-              ),
-              TextField(
-                key: const Key('noteField'),
-                controller: noteController,
-                decoration: const InputDecoration(labelText: 'メモ'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('キャンセル'),
-            ),
-            TextButton(
-              onPressed: () {
-                final investment = int.tryParse(investmentController.text) ?? 0;
-                final returnAmount = int.tryParse(returnController.text) ?? 0;
-                DateTime? startTime;
-                DateTime? endTime;
-                if (startController.text.isNotEmpty) {
-                  final parts = startController.text.split(':');
-                  if (parts.length == 2) {
-                    final h = int.tryParse(parts[0]);
-                    final m = int.tryParse(parts[1]);
-                    if (h != null && m != null) {
-                      startTime = DateTime(
-                          _selectedDate.year,
-                          _selectedDate.month,
-                          _selectedDate.day,
-                          h,
-                          m);
-                    }
-                  }
-                }
-                if (endController.text.isNotEmpty) {
-                  final parts = endController.text.split(':');
-                  if (parts.length == 2) {
-                    final h = int.tryParse(parts[0]);
-                    final m = int.tryParse(parts[1]);
-                    if (h != null && m != null) {
-                      endTime = DateTime(
-                          _selectedDate.year,
-                          _selectedDate.month,
-                          _selectedDate.day,
-                          h,
-                          m);
-                    }
-                  }
-                }
-                final note = noteController.text;
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            Future<void> _addHall() async {
+              final hallController = TextEditingController();
+              final newHall = await showDialog<String>(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: const Text('ホールを追加'),
+                    content: TextField(
+                      key: const Key('hallNameField'),
+                      controller: hallController,
+                      decoration: const InputDecoration(labelText: 'ホール名'),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('キャンセル'),
+                      ),
+                      TextButton(
+                        onPressed: () =>
+                            Navigator.of(context).pop(hallController.text.trim()),
+                        child: const Text('追加'),
+                      ),
+                    ],
+                  );
+                },
+              );
+              if (newHall != null && newHall.isNotEmpty) {
                 setState(() {
-                  _records.add(Record(
-                    date: _selectedDate,
-                    investment: investment,
-                    returnAmount: returnAmount,
-                    startTime: startTime,
-                    endTime: endTime,
-                    note: note.isEmpty ? null : note,
-                  ));
+                  _halls.add(newHall);
                 });
-                Navigator.of(context).pop();
-              },
-              child: const Text('保存'),
-            ),
-          ],
+                setStateDialog(() {
+                  selectedHall = newHall;
+                });
+              }
+            }
+
+            return AlertDialog(
+              title: const Text('記録を追加'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButton<String>(
+                          key: const Key('hallDropdown'),
+                          isExpanded: true,
+                          value: selectedHall,
+                          hint: const Text('ホールを選択'),
+                          items: _halls
+                              .map((h) =>
+                                  DropdownMenuItem(value: h, child: Text(h)))
+                              .toList(),
+                          onChanged: (value) {
+                            setStateDialog(() {
+                              selectedHall = value;
+                            });
+                          },
+                        ),
+                      ),
+                      IconButton(
+                        key: const Key('addHallButton'),
+                        icon: const Icon(Icons.add),
+                        onPressed: _addHall,
+                      ),
+                    ],
+                  ),
+                  TextField(
+                    key: const Key('investmentField'),
+                    controller: investmentController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: '投資額'),
+                  ),
+                  TextField(
+                    key: const Key('returnField'),
+                    controller: returnController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: '回収額'),
+                  ),
+                  TextField(
+                    key: const Key('startField'),
+                    controller: startController,
+                    keyboardType: TextInputType.datetime,
+                    decoration:
+                        const InputDecoration(labelText: '開始時間 (HH:mm)'),
+                  ),
+                  TextField(
+                    key: const Key('endField'),
+                    controller: endController,
+                    keyboardType: TextInputType.datetime,
+                    decoration:
+                        const InputDecoration(labelText: '終了時間 (HH:mm)'),
+                  ),
+                  TextField(
+                    key: const Key('noteField'),
+                    controller: noteController,
+                    decoration: const InputDecoration(labelText: 'メモ'),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('キャンセル'),
+                ),
+                TextButton(
+                  onPressed: selectedHall == null
+                      ? null
+                      : () {
+                          final investment =
+                              int.tryParse(investmentController.text) ?? 0;
+                          final returnAmount =
+                              int.tryParse(returnController.text) ?? 0;
+                          DateTime? startTime;
+                          DateTime? endTime;
+                          if (startController.text.isNotEmpty) {
+                            final parts = startController.text.split(':');
+                            if (parts.length == 2) {
+                              final h = int.tryParse(parts[0]);
+                              final m = int.tryParse(parts[1]);
+                              if (h != null && m != null) {
+                                startTime = DateTime(
+                                    _selectedDate.year,
+                                    _selectedDate.month,
+                                    _selectedDate.day,
+                                    h,
+                                    m);
+                              }
+                            }
+                          }
+                          if (endController.text.isNotEmpty) {
+                            final parts = endController.text.split(':');
+                            if (parts.length == 2) {
+                              final h = int.tryParse(parts[0]);
+                              final m = int.tryParse(parts[1]);
+                              if (h != null && m != null) {
+                                endTime = DateTime(
+                                    _selectedDate.year,
+                                    _selectedDate.month,
+                                    _selectedDate.day,
+                                    h,
+                                    m);
+                              }
+                            }
+                          }
+                          final note = noteController.text;
+                          setState(() {
+                            _records.add(Record(
+                              date: _selectedDate,
+                              investment: investment,
+                              returnAmount: returnAmount,
+                              hall: selectedHall!,
+                              startTime: startTime,
+                              endTime: endTime,
+                              note: note.isEmpty ? null : note,
+                            ));
+                          });
+                          Navigator.of(context).pop();
+                        },
+                  child: const Text('保存'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -175,11 +250,12 @@ class _RecordListPageState extends State<RecordListPage> {
                       String _formatTime(DateTime t) =>
                           '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
                       return ListTile(
-                        title: Text(
-                            '投資: ${record.investment}円, 回収: ${record.returnAmount}円'),
+                        title: Text('ホール: ${record.hall}'),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Text(
+                                '投資: ${record.investment}円, 回収: ${record.returnAmount}円'),
                             Text('収支: ${record.profit}円'),
                             if (record.startTime != null && record.endTime != null)
                               Text(
