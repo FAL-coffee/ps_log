@@ -33,6 +33,7 @@ class _RecordListPageState extends State<RecordListPage> {
   void _addRecord() {
     final investmentController = TextEditingController();
     final returnController = TextEditingController();
+    final noteController = TextEditingController();
     showDialog(
       context: context,
       builder: (context) {
@@ -53,6 +54,11 @@ class _RecordListPageState extends State<RecordListPage> {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: 'Return'),
               ),
+              TextField(
+                key: const Key('noteField'),
+                controller: noteController,
+                decoration: const InputDecoration(labelText: 'Note'),
+              ),
             ],
           ),
           actions: [
@@ -68,6 +74,7 @@ class _RecordListPageState extends State<RecordListPage> {
                   _records.add(Record(
                     investment: investment,
                     returnAmount: returnAmount,
+                    note: noteController.text,
                   ));
                 });
                 Navigator.of(context).pop();
@@ -92,7 +99,14 @@ class _RecordListPageState extends State<RecordListPage> {
                 final record = _records[index];
                 return ListTile(
                   title: Text('Investment: \$${record.investment}, Return: \$${record.returnAmount}'),
-                  subtitle: Text('Profit: \$${record.profit}'),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Profit: \$${record.profit}'),
+                      if (record.note != null && record.note!.isNotEmpty)
+                        Text('Note: ${record.note}')
+                    ],
+                  ),
                 );
               },
             ),

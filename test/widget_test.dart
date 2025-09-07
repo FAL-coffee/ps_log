@@ -14,11 +14,13 @@ void main() {
 
     await tester.enterText(find.byKey(const Key('investmentField')), '1000');
     await tester.enterText(find.byKey(const Key('returnField')), '1500');
+    await tester.enterText(find.byKey(const Key('noteField')), 'test note');
 
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Investment: \$1000'), findsOneWidget);
     expect(find.textContaining('Profit: \$500'), findsOneWidget);
+    expect(find.textContaining('Note: test note'), findsOneWidget);
   });
 }
