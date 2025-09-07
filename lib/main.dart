@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'record.dart';
 import 'machine_master.dart';
 import 'tag_management.dart';
+import 'count_master_management.dart';
 import 'statistics.dart';
 import 'hall.dart';
 
@@ -65,6 +66,22 @@ class _RecordListPageState extends State<RecordListPage> {
     setState(() {});
   }
 
+  Future<void> _manageCountMaster() async {
+    final updated = await Navigator.push<List<String>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CountMasterPage(counts: _countMaster),
+      ),
+    );
+    if (updated != null) {
+      setState(() {
+        _countMaster
+          ..clear()
+          ..addAll(updated);
+      });
+    }
+  }
+
   void _addRecord() {
     final formKey = GlobalKey<FormState>();
 
@@ -110,7 +127,21 @@ class _RecordListPageState extends State<RecordListPage> {
                         return TextField(
                           controller: textController,
                           focusNode: focusNode,
-                          decoration: const InputDecoration(labelText: '項目'),
+                          decoration: InputDecoration(
+                            labelText: '項目',
+                            suffixIcon: PopupMenuButton<String>(
+                              icon: const Icon(Icons.arrow_drop_down),
+                              onSelected: (value) {
+                                textController.text = value;
+                              },
+                              itemBuilder: (context) => _countMaster
+                                  .map((e) => PopupMenuItem<String>(
+                                        value: e,
+                                        child: Text(e),
+                                      ))
+                                  .toList(),
+                            ),
+                          ),
                         );
                       },
                     ),
@@ -491,6 +522,10 @@ class _RecordListPageState extends State<RecordListPage> {
           IconButton(
             icon: const Icon(Icons.label),
             onPressed: _manageTags,
+          ),
+          IconButton(
+            icon: const Icon(Icons.format_list_numbered),
+            onPressed: _manageCountMaster,
           )
         ],
       ),
