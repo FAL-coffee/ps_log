@@ -98,6 +98,11 @@ class _RecordListPageState extends State<RecordListPage> {
   Widget build(BuildContext context) {
     final dayRecords =
         _records.where((r) => _isSameDay(r.date, _selectedDate)).toList();
+    final totalInvestment =
+        dayRecords.fold<int>(0, (sum, r) => sum + r.investment);
+    final totalReturn =
+        dayRecords.fold<int>(0, (sum, r) => sum + r.returnAmount);
+    final totalProfit = totalReturn - totalInvestment;
     return Scaffold(
       appBar: AppBar(title: const Text('Records')),
       body: Column(
@@ -133,6 +138,11 @@ class _RecordListPageState extends State<RecordListPage> {
                       );
                     },
                   ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+                'Total Investment: \$${totalInvestment}, Total Return: \$${totalReturn}, Total Profit: \$${totalProfit}'),
           ),
         ],
       ),

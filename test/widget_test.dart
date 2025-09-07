@@ -8,6 +8,7 @@ void main() {
     await tester.pumpWidget(const PsLogApp());
 
     expect(find.byType(ListTile), findsNothing);
+    expect(find.textContaining('Total Profit: \$0'), findsOneWidget);
 
     await tester.tap(find.byType(FloatingActionButton));
     await tester.pumpAndSettle();
@@ -22,5 +23,6 @@ void main() {
     expect(find.textContaining('Investment: \$1000'), findsOneWidget);
     expect(find.textContaining('Profit: \$500'), findsOneWidget);
     expect(find.textContaining('Note: Good day'), findsOneWidget);
+    expect(find.textContaining('Total Profit: \$500'), findsOneWidget);
   });
 }
