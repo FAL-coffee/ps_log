@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'record.dart';
+import 'machine_master.dart';
 
 void main() {
   runApp(const PsLogApp());
@@ -36,11 +37,13 @@ class _RecordListPageState extends State<RecordListPage> {
   }
 
   void _addRecord() {
+    late TextEditingController machineController;
     final investmentController = TextEditingController();
     final returnController = TextEditingController();
     final startController = TextEditingController();
     final endController = TextEditingController();
     final noteController = TextEditingController();
+    Machine? selectedMachine;
     showDialog(
       context: context,
       builder: (context) {
@@ -49,6 +52,34 @@ class _RecordListPageState extends State<RecordListPage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Autocomplete<Machine>(
+                optionsBuilder: (TextEditingValue textEditingValue) {
+                  if (textEditingValue.text == '') {
+                    return const Iterable<Machine>.empty();
+                  }
+                  final query = textEditingValue.text.toLowerCase();
+                  return machineMaster.where((Machine m) {
+                    final nameMatch = m.name.toLowerCase().contains(query);
+                    final aliasMatch =
+                        m.aliases.any((a) => a.toLowerCase().contains(query));
+                    return nameMatch || aliasMatch;
+                  });
+                },
+                displayStringForOption: (Machine m) => m.name,
+                onSelected: (Machine m) {
+                  selectedMachine = m;
+                },
+                fieldViewBuilder: (context, textEditingController, focusNode,
+                    onEditingComplete) {
+                  machineController = textEditingController;
+                  return TextField(
+                    key: const Key('machineField'),
+                    controller: textEditingController,
+                    focusNode: focusNode,
+                    decoration: const InputDecoration(labelText: '機種'),
+                  );
+                },
+              ),
               TextField(
                 key: const Key('investmentField'),
                 controller: investmentController,
@@ -65,13 +96,15 @@ class _RecordListPageState extends State<RecordListPage> {
                 key: const Key('startField'),
                 controller: startController,
                 keyboardType: TextInputType.datetime,
-                decoration: const InputDecoration(labelText: '開始時間 (HH:mm)'),
+                decoration:
+                    const InputDecoration(labelText: '開始時間 (HH:mm)'),
               ),
               TextField(
                 key: const Key('endField'),
                 controller: endController,
                 keyboardType: TextInputType.datetime,
-                decoration: const InputDecoration(labelText: '終了時間 (HH:mm)'),
+                decoration:
+                    const InputDecoration(labelText: '終了時間 (HH:mm)'),
               ),
               TextField(
                 key: const Key('noteField'),
@@ -87,8 +120,10 @@ class _RecordListPageState extends State<RecordListPage> {
             ),
             TextButton(
               onPressed: () {
-                final investment = int.tryParse(investmentController.text) ?? 0;
-                final returnAmount = int.tryParse(returnController.text) ?? 0;
+                final investment =
+                    int.tryParse(investmentController.text) ?? 0;
+                final returnAmount =
+                    int.tryParse(returnController.text) ?? 0;
                 DateTime? startTime;
                 DateTime? endTime;
                 if (startController.text.isNotEmpty) {
@@ -122,9 +157,26 @@ class _RecordListPageState extends State<RecordListPage> {
                   }
                 }
                 final note = noteController.text;
+                final machineInput = machineController.text.trim();
+                String machineName;
+                if (selectedMachine != null &&
+                    selectedMachine!.name == machineInput) {
+                  machineName = selectedMachine!.name;
+                } else {
+                  try {
+                    machineName = machineMaster
+                        .firstWhere((m) =>
+                            m.name == machineInput ||
+                            m.aliases.contains(machineInput))
+                        .name;
+                  } catch (_) {
+                    machineName = machineInput;
+                  }
+                }
                 setState(() {
                   _records.add(Record(
                     date: _selectedDate,
+                    machine: machineName,
                     investment: investment,
                     returnAmount: returnAmount,
                     startTime: startTime,
@@ -175,13 +227,15 @@ class _RecordListPageState extends State<RecordListPage> {
                       String _formatTime(DateTime t) =>
                           '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
                       return ListTile(
-                        title: Text(
-                            '投資: ${record.investment}円, 回収: ${record.returnAmount}円'),
+                        title: Text(record.machine),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Text(
+                                '投資: ${record.investment}円, 回収: ${record.returnAmount}円'),
                             Text('収支: ${record.profit}円'),
-                            if (record.startTime != null && record.endTime != null)
+                            if (record.startTime != null &&
+                                record.endTime != null)
                               Text(
                                   '開始: ${_formatTime(record.startTime!)}, 終了: ${_formatTime(record.endTime!)}'),
                             if (record.note != null)

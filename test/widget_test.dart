@@ -10,18 +10,24 @@ void main() {
     expect(find.byType(ListTile), findsNothing);
     expect(find.textContaining('総収支: 0円'), findsOneWidget);
 
-    await tester.tap(find.byType(FloatingActionButton));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byType(FloatingActionButton));
+      await tester.pumpAndSettle();
 
-    await tester.enterText(find.byKey(const Key('investmentField')), '1000');
-    await tester.enterText(find.byKey(const Key('returnField')), '1500');
-    await tester.enterText(find.byKey(const Key('noteField')), '良い日');
+      await tester.enterText(
+          find.byKey(const Key('machineField')), 'ユニコーン');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('PF機動戦士ガンダムユニコーン').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('investmentField')), '1000');
+      await tester.enterText(find.byKey(const Key('returnField')), '1500');
+      await tester.enterText(find.byKey(const Key('noteField')), '良い日');
 
     await tester.tap(find.text('保存'));
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    expect(find.textContaining('投資: 1000円'), findsOneWidget);
-    expect(find.textContaining('収支: 500円'), findsOneWidget);
-    expect(find.textContaining('メモ: 良い日'), findsOneWidget);
-  });
-}
+      expect(find.text('PF機動戦士ガンダムユニコーン'), findsOneWidget);
+      expect(find.textContaining('投資: 1000円'), findsOneWidget);
+      expect(find.textContaining('収支: 500円'), findsOneWidget);
+      expect(find.textContaining('メモ: 良い日'), findsOneWidget);
+    });
+  }
