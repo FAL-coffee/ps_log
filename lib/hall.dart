@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:google_maps_webservice/places.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:geolocator/geolocator.dart';
 
 /// ページ: 近隣ホール検索
 class HallSearchPage extends StatefulWidget {
@@ -25,10 +26,34 @@ class _HallSearchPageState extends State<HallSearchPage> {
     _searchNearby();
   }
 
+  Future<Location?> _currentLocation() async {
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return null;
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          return null;
+        }
+      }
+      if (permission == LocationPermission.deniedForever) {
+        return null;
+      }
+      final pos = await Geolocator.getCurrentPosition();
+      return Location(lat: pos.latitude, lng: pos.longitude);
+    } catch (e) {
+      debugPrint('位置情報の取得に失敗しました: $e');
+      return null;
+    }
+  }
+
   Future<void> _searchNearby([String keyword = 'パチンコ']) async {
     try {
+      final loc =
+          await _currentLocation() ?? Location(lat: 35.6812, lng: 139.7671);
       final response = await _places.searchNearbyWithRadius(
-        Location(lat: 35.6812, lng: 139.7671),
+        loc,
         1500,
         keyword: keyword,
         type: 'establishment',
@@ -63,9 +88,7 @@ class _HallSearchPageState extends State<HallSearchPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('ホール検索'),
-      ),
+      appBar: AppBar(title: const Text('ホール検索')),
       body: Column(
         children: [
           Padding(
@@ -75,9 +98,7 @@ class _HallSearchPageState extends State<HallSearchPage> {
                 Expanded(
                   child: TextField(
                     controller: _queryController,
-                    decoration: const InputDecoration(
-                      labelText: 'キーワード',
-                    ),
+                    decoration: const InputDecoration(labelText: 'キーワード'),
                   ),
                 ),
                 IconButton(
@@ -237,10 +258,7 @@ class _HallDetailPageState extends State<HallDetailPage> {
             ),
           ),
           if (_machines.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(8),
-              child: Text('機種情報はありません'),
-            )
+            const Padding(padding: EdgeInsets.all(8), child: Text('機種情報はありません'))
           else
             ..._machines.map((m) => ListTile(title: Text(m))).toList(),
           if (widget.place.website != null)
@@ -253,4 +271,3 @@ class _HallDetailPageState extends State<HallDetailPage> {
     );
   }
 }
-
