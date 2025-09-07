@@ -194,8 +194,9 @@ class _RecordListPageState extends State<RecordListPage> {
           ),
           Padding(
             padding: const EdgeInsets.all(16),
+            // 当日の合計投資額・回収額・収支を表示
             child: Text(
-                'Total Investment: \$${totalInvestment}, Total Return: \$${totalReturn}, Total Profit: \$${totalProfit}'),
+                '総投資額: ${totalInvestment}円, 総回収額: ${totalReturn}円, 総収支: ${totalProfit}円'),
           ),
         ],
       ),
