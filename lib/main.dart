@@ -30,6 +30,7 @@ class RecordListPage extends StatefulWidget {
 
 class _RecordListPageState extends State<RecordListPage> {
   final List<Record> _records = [];
+  final List<String> _halls = [];
   DateTime _selectedDate = DateTime.now();
 
   bool _isSameDay(DateTime a, DateTime b) {
@@ -40,6 +41,7 @@ class _RecordListPageState extends State<RecordListPage> {
     final formKey = GlobalKey<FormState>();
 
     // Controllers
+    late TextEditingController hallController;
     late TextEditingController machineController;
     final investmentController = TextEditingController();
     final returnController = TextEditingController();
@@ -61,6 +63,34 @@ class _RecordListPageState extends State<RecordListPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // ホールオートコンプリート（ユーザー登録）
+                  Autocomplete<String>(
+                    optionsBuilder: (TextEditingValue tev) {
+                      final q = tev.text.trim().toLowerCase();
+                      if (q.isEmpty) {
+                        return _halls;
+                      }
+                      return _halls
+                          .where((h) => h.toLowerCase().contains(q));
+                    },
+                    onSelected: (h) => hallController.text = h,
+                    fieldViewBuilder:
+                        (context, textController, focusNode, _) {
+                      hallController = textController;
+                      return TextFormField(
+                        key: const Key('hallField'),
+                        controller: textController,
+                        focusNode: focusNode,
+                        decoration:
+                            const InputDecoration(labelText: 'ホール'),
+                        validator: (v) =>
+                            (v == null || v.trim().isEmpty)
+                                ? 'ホールを入力してください'
+                                : null,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
                   // 機種オートコンプリート（alias対応）
                   Autocomplete<Machine>(
                     optionsBuilder: (TextEditingValue tev) {
@@ -185,6 +215,7 @@ class _RecordListPageState extends State<RecordListPage> {
                 }
 
                 final note = noteController.text.trim();
+                final hallName = hallController.text.trim();
                 final machineInput = machineController.text.trim();
 
                 // 機種名の決定（選択優先→マスタ検索→入力そのまま）
@@ -205,8 +236,12 @@ class _RecordListPageState extends State<RecordListPage> {
                 }
 
                 setState(() {
+                  if (!_halls.contains(hallName)) {
+                    _halls.add(hallName);
+                  }
                   _records.add(Record(
                     date: _selectedDate,
+                    hall: hallName,
                     machine: machineName,
                     investment: investment,
                     returnAmount: returnAmount,
@@ -262,6 +297,7 @@ class _RecordListPageState extends State<RecordListPage> {
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Text('ホール: ${record.hall}'),
                             Text(
                                 '投資: ${record.investment}円, 回収: ${record.returnAmount}円'),
                             Text('収支: ${record.profit}円'),
