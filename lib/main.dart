@@ -454,9 +454,14 @@ class _RecordListPageState extends State<RecordListPage> {
           IconButton(
             icon: const Icon(Icons.bar_chart),
             onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => StatisticsPage(records: _records))),
+              context,
+              MaterialPageRoute(
+                builder: (_) => StatisticsPage(
+                  records: _records,
+                  countMaster: _countMaster,
+                ),
+              ),
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.label),
