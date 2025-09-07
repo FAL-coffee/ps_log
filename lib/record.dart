@@ -8,6 +8,11 @@ class CountEntry {
   final int count;
 
   const CountEntry({required this.name, required this.count});
+
+  Map<String, dynamic> toJson() => {'name': name, 'count': count};
+
+  factory CountEntry.fromJson(Map<String, dynamic> json) =>
+      CountEntry(name: json['name'] as String, count: json['count'] as int);
 }
 
 class Record {
@@ -62,4 +67,36 @@ class Record {
     if (startTime == null || endTime == null) return null;
     return endTime!.difference(startTime!);
   }
+
+  Map<String, dynamic> toJson() => {
+        'hall': hall,
+        'machine': machine,
+        'date': date.toIso8601String(),
+        'investment': investment,
+        'returnAmount': returnAmount,
+        'startTime': startTime?.toIso8601String(),
+        'endTime': endTime?.toIso8601String(),
+        'note': note,
+        'tags': tags,
+        'counts': counts.map((e) => e.toJson()).toList(),
+      };
+
+  factory Record.fromJson(Map<String, dynamic> json) => Record(
+        date: DateTime.parse(json['date'] as String),
+        hall: json['hall'] as String,
+        machine: json['machine'] as String,
+        investment: json['investment'] as int,
+        returnAmount: json['returnAmount'] as int,
+        startTime: json['startTime'] != null
+            ? DateTime.parse(json['startTime'] as String)
+            : null,
+        endTime: json['endTime'] != null
+            ? DateTime.parse(json['endTime'] as String)
+            : null,
+        note: json['note'] as String?,
+        tags: (json['tags'] as List<dynamic>? ?? []).cast<String>(),
+        counts: (json['counts'] as List<dynamic>? ?? [])
+            .map((e) => CountEntry.fromJson(Map<String, dynamic>.from(e)))
+            .toList(),
+      );
 }

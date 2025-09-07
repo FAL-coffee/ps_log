@@ -5,13 +5,43 @@ import 'tag_management.dart';
 import 'count_master_management.dart';
 import 'statistics.dart';
 import 'hall.dart';
+import 'settings.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const PsLogApp());
 }
 
-class PsLogApp extends StatelessWidget {
+class PsLogApp extends StatefulWidget {
   const PsLogApp({super.key});
+
+  @override
+  State<PsLogApp> createState() => _PsLogAppState();
+}
+
+class _PsLogAppState extends State<PsLogApp> {
+  DisplayMode? _mode;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMode();
+  }
+
+  Future<void> _loadMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final index = prefs.getInt('display_mode');
+    setState(() {
+      _mode = index != null ? DisplayMode.values[index] : null;
+    });
+  }
+
+  void _updateMode(DisplayMode mode) {
+    setState(() {
+      _mode = mode;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,13 +50,24 @@ class PsLogApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const RecordListPage(),
+      home: _mode == null
+          ? ModeSelectionPage(onSelected: (m) {
+              _updateMode(m);
+              SharedPreferences.getInstance()
+                  .then((p) => p.setInt('display_mode', m.index));
+            })
+          : RecordListPage(
+              mode: _mode!,
+              onModeChanged: _updateMode,
+            ),
     );
   }
 }
 
 class RecordListPage extends StatefulWidget {
-  const RecordListPage({super.key});
+  final DisplayMode mode;
+  final ValueChanged<DisplayMode> onModeChanged;
+  const RecordListPage({super.key, required this.mode, required this.onModeChanged});
 
   @override
   State<RecordListPage> createState() => _RecordListPageState();
@@ -80,6 +121,30 @@ class _RecordListPageState extends State<RecordListPage> {
           ..addAll(updated);
       });
     }
+  }
+
+  Future<void> _openSettings() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SettingsPage(
+          mode: widget.mode,
+          onModeChanged: (m) {
+            widget.onModeChanged(m);
+            setState(() {});
+          },
+          records: _records,
+          onRecordsRestored: (restored) {
+            setState(() {
+              _records
+                ..clear()
+                ..addAll(restored);
+            });
+          },
+        ),
+      ),
+    );
+    setState(() {});
   }
 
   void _addRecord() {
@@ -494,38 +559,47 @@ class _RecordListPageState extends State<RecordListPage> {
       appBar: AppBar(
         title: const Text('記録一覧'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.bar_chart),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => StatisticsPage(
-                  records: _records,
-                  countMaster: _countMaster,
+          if (widget.mode == DisplayMode.detailed)
+            IconButton(
+              icon: const Icon(Icons.bar_chart),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => StatisticsPage(
+                    records: _records,
+                    countMaster: _countMaster,
+                  ),
                 ),
               ),
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.store),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => HallSearchPage(apiKey: _placesApiKey),
+          if (widget.mode == DisplayMode.detailed)
+            IconButton(
+              icon: const Icon(Icons.store),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => HallSearchPage(apiKey: _placesApiKey),
+                ),
               ),
             ),
-          ),
+          if (widget.mode == DisplayMode.detailed)
+            IconButton(
+              icon: const Icon(Icons.videogame_asset),
+              onPressed: _manageMachines,
+            ),
+          if (widget.mode == DisplayMode.detailed)
+            IconButton(
+              icon: const Icon(Icons.label),
+              onPressed: _manageTags,
+            ),
+          if (widget.mode == DisplayMode.detailed)
+            IconButton(
+              icon: const Icon(Icons.format_list_numbered),
+              onPressed: _manageCountMaster,
+            ),
           IconButton(
-            icon: const Icon(Icons.videogame_asset),
-            onPressed: _manageMachines,
-          ),
-          IconButton(
-            icon: const Icon(Icons.label),
-            onPressed: _manageTags,
-          ),
-          IconButton(
-            icon: const Icon(Icons.format_list_numbered),
-            onPressed: _manageCountMaster,
+            icon: const Icon(Icons.settings),
+            onPressed: _openSettings,
           )
         ],
       ),
