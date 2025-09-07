@@ -41,44 +41,66 @@ class _RecordListPageState extends State<RecordListPage> {
     final startController = TextEditingController();
     final endController = TextEditingController();
     final noteController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: const Text('記録を追加'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                key: const Key('investmentField'),
-                controller: investmentController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: '投資額'),
-              ),
-              TextField(
-                key: const Key('returnField'),
-                controller: returnController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: '回収額'),
-              ),
-              TextField(
-                key: const Key('startField'),
-                controller: startController,
-                keyboardType: TextInputType.datetime,
-                decoration: const InputDecoration(labelText: '開始時間 (HH:mm)'),
-              ),
-              TextField(
-                key: const Key('endField'),
-                controller: endController,
-                keyboardType: TextInputType.datetime,
-                decoration: const InputDecoration(labelText: '終了時間 (HH:mm)'),
-              ),
-              TextField(
-                key: const Key('noteField'),
-                controller: noteController,
-                decoration: const InputDecoration(labelText: 'メモ'),
-              ),
-            ],
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  key: const Key('investmentField'),
+                  controller: investmentController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: '投資額'),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return '投資額を入力してください';
+                    }
+                    if (int.tryParse(value) == null) {
+                      return '数値を入力してください';
+                    }
+                    return null;
+                  },
+                ),
+                TextFormField(
+                  key: const Key('returnField'),
+                  controller: returnController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: '回収額'),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return '回収額を入力してください';
+                    }
+                    if (int.tryParse(value) == null) {
+                      return '数値を入力してください';
+                    }
+                    return null;
+                  },
+                ),
+                TextField(
+                  key: const Key('startField'),
+                  controller: startController,
+                  keyboardType: TextInputType.datetime,
+                  decoration: const InputDecoration(labelText: '開始時間 (HH:mm)'),
+                ),
+                TextField(
+                  key: const Key('endField'),
+                  controller: endController,
+                  keyboardType: TextInputType.datetime,
+                  decoration: const InputDecoration(labelText: '終了時間 (HH:mm)'),
+                ),
+                TextField(
+                  key: const Key('noteField'),
+                  controller: noteController,
+                  decoration: const InputDecoration(labelText: 'メモ'),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -87,8 +109,11 @@ class _RecordListPageState extends State<RecordListPage> {
             ),
             TextButton(
               onPressed: () {
-                final investment = int.tryParse(investmentController.text) ?? 0;
-                final returnAmount = int.tryParse(returnController.text) ?? 0;
+                if (!(formKey.currentState?.validate() ?? false)) {
+                  return;
+                }
+                final investment = int.parse(investmentController.text);
+                final returnAmount = int.parse(returnController.text);
                 DateTime? startTime;
                 DateTime? endTime;
                 if (startController.text.isNotEmpty) {
