@@ -3,6 +3,7 @@ import 'record.dart';
 import 'machine_master.dart';
 import 'tag_management.dart';
 import 'statistics.dart';
+import 'hall.dart';
 
 void main() {
   runApp(const PsLogApp());
@@ -36,6 +37,9 @@ class _RecordListPageState extends State<RecordListPage> {
   final List<String> _tags = [];
   final List<String> _countMaster = [];
   DateTime _selectedDate = DateTime.now();
+
+  static const String _placesApiKey =
+      String.fromEnvironment('PLACES_API_KEY', defaultValue: 'YOUR_API_KEY');
 
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
@@ -460,6 +464,15 @@ class _RecordListPageState extends State<RecordListPage> {
                   records: _records,
                   countMaster: _countMaster,
                 ),
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.store),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => HallSearchPage(apiKey: _placesApiKey),
               ),
             ),
           ),
