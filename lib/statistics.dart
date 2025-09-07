@@ -105,6 +105,25 @@ class _GraphTabState extends State<_GraphTab> {
     final totals = _aggregate(widget.records, _period);
     final keys = totals.keys.toList()..sort();
 
+    // Summary statistics
+    final totalCount = widget.records.length;
+    final winCount =
+        widget.records.where((r) => r.profit > 0).length;
+    final winRate =
+        totalCount == 0 ? 0 : winCount / totalCount;
+    final totalInvestment =
+        widget.records.fold<int>(0, (sum, r) => sum + r.investment);
+    final totalReturn =
+        widget.records.fold<int>(0, (sum, r) => sum + r.returnAmount);
+    final avgInvestment =
+        totalCount == 0 ? 0 : totalInvestment / totalCount;
+    final avgReturn =
+        totalCount == 0 ? 0 : totalReturn / totalCount;
+    final totalDuration = widget.records.fold<Duration>(
+        Duration.zero, (sum, r) => sum + (r.duration ?? Duration.zero));
+    final durationHours = totalDuration.inHours;
+    final durationMinutes = totalDuration.inMinutes % 60;
+
     Widget chart;
     if (keys.isEmpty) {
       chart = const Center(child: Text('データがありません'));
@@ -169,7 +188,19 @@ class _GraphTabState extends State<_GraphTab> {
                 .toList(),
           ),
         ),
-        Expanded(child: Padding(padding: const EdgeInsets.all(16), child: chart))
+        Expanded(child: Padding(padding: const EdgeInsets.all(16), child: chart)),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('勝率: ${(winRate * 100).toStringAsFixed(1)}%'),
+              Text('平均投資: ${avgInvestment.toStringAsFixed(1)}円'),
+              Text('平均回収: ${avgReturn.toStringAsFixed(1)}円'),
+              Text('稼働時間合計: ${durationHours}時間${durationMinutes}分'),
+            ],
+          ),
+        ),
       ],
     );
   }
