@@ -37,81 +37,113 @@ class _RecordListPageState extends State<RecordListPage> {
   }
 
   void _addRecord() {
+    final formKey = GlobalKey<FormState>();
+
+    // Controllers
     late TextEditingController machineController;
     final investmentController = TextEditingController();
     final returnController = TextEditingController();
     final startController = TextEditingController();
     final endController = TextEditingController();
     final noteController = TextEditingController();
+
+    // Autocomplete selection
     Machine? selectedMachine;
+
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: const Text('記録を追加'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Autocomplete<Machine>(
-                optionsBuilder: (TextEditingValue textEditingValue) {
-                  if (textEditingValue.text == '') {
-                    return const Iterable<Machine>.empty();
-                  }
-                  final query = textEditingValue.text.toLowerCase();
-                  return machineMaster.where((Machine m) {
-                    final nameMatch = m.name.toLowerCase().contains(query);
-                    final aliasMatch =
-                        m.aliases.any((a) => a.toLowerCase().contains(query));
-                    return nameMatch || aliasMatch;
-                  });
-                },
-                displayStringForOption: (Machine m) => m.name,
-                onSelected: (Machine m) {
-                  selectedMachine = m;
-                },
-                fieldViewBuilder: (context, textEditingController, focusNode,
-                    onEditingComplete) {
-                  machineController = textEditingController;
-                  return TextField(
-                    key: const Key('machineField'),
-                    controller: textEditingController,
-                    focusNode: focusNode,
-                    decoration: const InputDecoration(labelText: '機種'),
-                  );
-                },
+          content: Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 機種オートコンプリート（alias対応）
+                  Autocomplete<Machine>(
+                    optionsBuilder: (TextEditingValue tev) {
+                      final q = tev.text.trim().toLowerCase();
+                      if (q.isEmpty) return const Iterable<Machine>.empty();
+                      return machineMaster.where((m) {
+                        final nameMatch = m.name.toLowerCase().contains(q);
+                        final aliasMatch = m.aliases
+                            .any((a) => a.toLowerCase().contains(q));
+                        return nameMatch || aliasMatch;
+                      });
+                    },
+                    displayStringForOption: (m) => m.name,
+                    onSelected: (m) => selectedMachine = m,
+                    fieldViewBuilder: (context, textController, focusNode, _) {
+                      machineController = textController;
+                      return TextFormField(
+                        key: const Key('machineField'),
+                        controller: textController,
+                        focusNode: focusNode,
+                        decoration: const InputDecoration(labelText: '機種'),
+                        validator: (v) =>
+                            (v == null || v.trim().isEmpty) ? '機種を入力してください' : null,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    key: const Key('investmentField'),
+                    controller: investmentController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: '投資額'),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return '投資額を入力してください';
+                      }
+                      if (int.tryParse(value) == null) {
+                        return '数値を入力してください';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    key: const Key('returnField'),
+                    controller: returnController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: '回収額'),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return '回収額を入力してください';
+                      }
+                      if (int.tryParse(value) == null) {
+                        return '数値を入力してください';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    key: const Key('startField'),
+                    controller: startController,
+                    keyboardType: TextInputType.datetime,
+                    decoration:
+                        const InputDecoration(labelText: '開始時間 (HH:mm)'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    key: const Key('endField'),
+                    controller: endController,
+                    keyboardType: TextInputType.datetime,
+                    decoration:
+                        const InputDecoration(labelText: '終了時間 (HH:mm)'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    key: const Key('noteField'),
+                    controller: noteController,
+                    decoration: const InputDecoration(labelText: 'メモ'),
+                  ),
+                ],
               ),
-              TextField(
-                key: const Key('investmentField'),
-                controller: investmentController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: '投資額'),
-              ),
-              TextField(
-                key: const Key('returnField'),
-                controller: returnController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: '回収額'),
-              ),
-              TextField(
-                key: const Key('startField'),
-                controller: startController,
-                keyboardType: TextInputType.datetime,
-                decoration:
-                    const InputDecoration(labelText: '開始時間 (HH:mm)'),
-              ),
-              TextField(
-                key: const Key('endField'),
-                controller: endController,
-                keyboardType: TextInputType.datetime,
-                decoration:
-                    const InputDecoration(labelText: '終了時間 (HH:mm)'),
-              ),
-              TextField(
-                key: const Key('noteField'),
-                controller: noteController,
-                decoration: const InputDecoration(labelText: 'メモ'),
-              ),
-            ],
+            ),
           ),
           actions: [
             TextButton(
@@ -120,44 +152,42 @@ class _RecordListPageState extends State<RecordListPage> {
             ),
             TextButton(
               onPressed: () {
-                final investment =
-                    int.tryParse(investmentController.text) ?? 0;
-                final returnAmount =
-                    int.tryParse(returnController.text) ?? 0;
+                if (!(formKey.currentState?.validate() ?? false)) {
+                  return;
+                }
+
+                final investment = int.parse(investmentController.text);
+                final returnAmount = int.parse(returnController.text);
+
                 DateTime? startTime;
                 DateTime? endTime;
+
+                DateTime? _parseHM(String s) {
+                  final parts = s.split(':');
+                  if (parts.length != 2) return null;
+                  final h = int.tryParse(parts[0]);
+                  final m = int.tryParse(parts[1]);
+                  if (h == null || m == null) return null;
+                  return DateTime(
+                    _selectedDate.year,
+                    _selectedDate.month,
+                    _selectedDate.day,
+                    h,
+                    m,
+                  );
+                }
+
                 if (startController.text.isNotEmpty) {
-                  final parts = startController.text.split(':');
-                  if (parts.length == 2) {
-                    final h = int.tryParse(parts[0]);
-                    final m = int.tryParse(parts[1]);
-                    if (h != null && m != null) {
-                      startTime = DateTime(
-                          _selectedDate.year,
-                          _selectedDate.month,
-                          _selectedDate.day,
-                          h,
-                          m);
-                    }
-                  }
+                  startTime = _parseHM(startController.text);
                 }
                 if (endController.text.isNotEmpty) {
-                  final parts = endController.text.split(':');
-                  if (parts.length == 2) {
-                    final h = int.tryParse(parts[0]);
-                    final m = int.tryParse(parts[1]);
-                    if (h != null && m != null) {
-                      endTime = DateTime(
-                          _selectedDate.year,
-                          _selectedDate.month,
-                          _selectedDate.day,
-                          h,
-                          m);
-                    }
-                  }
+                  endTime = _parseHM(endController.text);
                 }
-                final note = noteController.text;
+
+                final note = noteController.text.trim();
                 final machineInput = machineController.text.trim();
+
+                // 機種名の決定（選択優先→マスタ検索→入力そのまま）
                 String machineName;
                 if (selectedMachine != null &&
                     selectedMachine!.name == machineInput) {
@@ -173,6 +203,7 @@ class _RecordListPageState extends State<RecordListPage> {
                     machineName = machineInput;
                   }
                 }
+
                 setState(() {
                   _records.add(Record(
                     date: _selectedDate,
@@ -203,6 +234,10 @@ class _RecordListPageState extends State<RecordListPage> {
     final totalReturn =
         dayRecords.fold<int>(0, (sum, r) => sum + r.returnAmount);
     final totalProfit = totalReturn - totalInvestment;
+
+    String _formatTime(DateTime t) =>
+        '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
     return Scaffold(
       appBar: AppBar(title: const Text('記録一覧')),
       body: Column(
@@ -212,9 +247,7 @@ class _RecordListPageState extends State<RecordListPage> {
             firstDate: DateTime(2000),
             lastDate: DateTime(2100),
             onDateChanged: (date) {
-              setState(() {
-                _selectedDate = date;
-              });
+              setState(() => _selectedDate = date);
             },
           ),
           Expanded(
@@ -224,8 +257,6 @@ class _RecordListPageState extends State<RecordListPage> {
                     itemCount: dayRecords.length,
                     itemBuilder: (context, index) {
                       final record = dayRecords[index];
-                      String _formatTime(DateTime t) =>
-                          '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
                       return ListTile(
                         title: Text(record.machine),
                         subtitle: Column(
@@ -238,8 +269,7 @@ class _RecordListPageState extends State<RecordListPage> {
                                 record.endTime != null)
                               Text(
                                   '開始: ${_formatTime(record.startTime!)}, 終了: ${_formatTime(record.endTime!)}'),
-                            if (record.note != null)
-                              Text('メモ: ${record.note}')
+                            if (record.note != null) Text('メモ: ${record.note}'),
                           ],
                         ),
                       );
@@ -248,9 +278,9 @@ class _RecordListPageState extends State<RecordListPage> {
           ),
           Padding(
             padding: const EdgeInsets.all(16),
-            // 当日の合計投資額・回収額・収支を表示
             child: Text(
-                '総投資額: ${totalInvestment}円, 総回収額: ${totalReturn}円, 総収支: ${totalProfit}円'),
+              '総投資額: ${totalInvestment}円, 総回収額: ${totalReturn}円, 総収支: ${totalProfit}円',
+            ),
           ),
         ],
       ),
