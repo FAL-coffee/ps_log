@@ -38,6 +38,7 @@ class _RecordListPageState extends State<RecordListPage> {
   void _addRecord() {
     final investmentController = TextEditingController();
     final returnController = TextEditingController();
+    final noteController = TextEditingController();
     showDialog(
       context: context,
       builder: (context) {
@@ -58,6 +59,11 @@ class _RecordListPageState extends State<RecordListPage> {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: 'Return'),
               ),
+              TextField(
+                key: const Key('noteField'),
+                controller: noteController,
+                decoration: const InputDecoration(labelText: 'Note'),
+              ),
             ],
           ),
           actions: [
@@ -69,11 +75,13 @@ class _RecordListPageState extends State<RecordListPage> {
               onPressed: () {
                 final investment = int.tryParse(investmentController.text) ?? 0;
                 final returnAmount = int.tryParse(returnController.text) ?? 0;
+                final note = noteController.text;
                 setState(() {
                   _records.add(Record(
                     date: _selectedDate,
                     investment: investment,
                     returnAmount: returnAmount,
+                    note: note.isEmpty ? null : note,
                   ));
                 });
                 Navigator.of(context).pop();
@@ -114,7 +122,14 @@ class _RecordListPageState extends State<RecordListPage> {
                       return ListTile(
                         title: Text(
                             'Investment: \$${record.investment}, Return: \$${record.returnAmount}'),
-                        subtitle: Text('Profit: \$${record.profit}'),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Profit: \$${record.profit}'),
+                            if (record.note != null)
+                              Text('Note: ${record.note}')
+                          ],
+                        ),
                       );
                     },
                   ),
