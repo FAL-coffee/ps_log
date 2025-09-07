@@ -1,5 +1,7 @@
 /// 1件の稼働記録を表すクラス
 class Record {
+  /// 選択した機種名
+  final String machine;
   /// 日付
   final DateTime date;
 
@@ -18,14 +20,15 @@ class Record {
   /// メモ
   final String? note;
 
-  const Record({
-    required this.date,
-    required this.investment,
-    required this.returnAmount,
-    this.startTime,
-    this.endTime,
-    this.note,
-  });
+    const Record({
+      required this.date,
+      required this.machine,
+      required this.investment,
+      required this.returnAmount,
+      this.startTime,
+      this.endTime,
+      this.note,
+    });
 
   /// 収支（回収額 − 投資額）
   int get profit => returnAmount - investment;
